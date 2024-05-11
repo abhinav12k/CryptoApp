@@ -1,16 +1,15 @@
 package com.example.crypto.ui
 
-import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.crypto.data.CryptoRepository
 import com.example.crypto.data.model.Coin
 import com.example.crypto.data.model.Coin.Companion.COIN_TYPE
 import com.example.crypto.data.model.Coin.Companion.TOKEN_TYPE
 import com.example.crypto.data.model.Filter
 import com.example.crypto.data.model.FilterTypes
-import com.example.crypto.domain.CryptoRepository
 import com.example.crypto.utils.Result
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -38,7 +37,6 @@ class CryptoViewModel(private val repository: CryptoRepository) : ViewModel() {
     fun fetchCryptoCoins() {
         viewModelScope.launch {
             fetch {
-                Log.d("Crypto", "Fetching coins from remote")
                 when (val res = repository.fetchCryptoCoins()) {
                     is Result.Success -> {
                         originalCoinList = res.data
@@ -73,15 +71,16 @@ class CryptoViewModel(private val repository: CryptoRepository) : ViewModel() {
                         CryptoViewState.CryptoData(findCoins(coinList, searchText))
                     }
                 } else {
-                    _viewState.value = CryptoViewState.CryptoData(
-                        findCoinsWithFilters(
-                            filterCoinList(
-                                coinList, selectedFilters
-                            ), searchText
-                        )
-                    )
+                    updateLocalFilters(selectedFilters)
+                    _viewState.value = CryptoViewState.CryptoData(findCoinsWithFilters(coinList, searchText))
                 }
             }
+        }
+    }
+
+    private fun updateLocalFilters(selectedFilters: List<Int>) {
+        updatedFilters.forEach { filter ->
+            filter.isSelected = filter.filterId in selectedFilters
         }
     }
 
@@ -101,10 +100,6 @@ class CryptoViewModel(private val repository: CryptoRepository) : ViewModel() {
                     FilterTypes.ONLY_COINS.filterId -> includeOnlyCoins = true
                     FilterTypes.ONLY_TOKENS.filterId -> includeOnlyTokens = true
                 }
-            }
-
-            updatedFilters.forEach { filter ->
-                filter.isSelected = filter.filterId in selectedFilters
             }
 
             val noFilterSelected = selectedFilters.isEmpty()
@@ -142,7 +137,6 @@ class CryptoViewModel(private val repository: CryptoRepository) : ViewModel() {
         searchJob?.cancel()
         searchJob = viewModelScope.launch {
             fetch {
-                Log.d("Crypto", "Starting search - $inputStr")
                 val coinList = originalCoinList
                 _viewState.value = if (coinList.isNullOrEmpty()) {
                     CryptoViewState.Error("No Coins found!")

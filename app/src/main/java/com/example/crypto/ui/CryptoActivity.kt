@@ -9,7 +9,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.crypto.CryptoApp
-import com.example.crypto.data.CryptoRepositoryImpl
+import com.example.crypto.data.CryptoRepository
 import com.example.crypto.data.remote.CryptoApi
 import com.example.crypto.databinding.ActivityCryptoBinding
 import com.example.crypto.utils.MarginItemDecoration
@@ -20,9 +20,7 @@ class CryptoActivity : AppCompatActivity() {
     private lateinit var binding: ActivityCryptoBinding
     private val viewModel: CryptoViewModel by lazy {
         getViewModel {
-            CryptoViewModel(
-                CryptoRepositoryImpl((application as CryptoApp).retrofit.create(CryptoApi::class.java))
-            )
+            CryptoViewModel((application as CryptoApp).repository)
         }
     }
 

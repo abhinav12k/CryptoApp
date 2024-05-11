@@ -1,12 +1,16 @@
 package com.example.crypto
 
 import android.app.Application
+import com.example.crypto.data.CryptoRepository
+import com.example.crypto.data.remote.CryptoApi
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
 class CryptoApp : Application() {
 
-    lateinit var retrofit: Retrofit
+    private lateinit var retrofit: Retrofit
+    private lateinit var cryptoApi: CryptoApi
+    lateinit var repository: CryptoRepository
 
     override fun onCreate() {
         super.onCreate()
@@ -16,6 +20,9 @@ class CryptoApp : Application() {
             .baseUrl(UPSTREAM_URL)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
+
+        cryptoApi = retrofit.create(CryptoApi::class.java)
+        repository = CryptoRepository(cryptoApi)
     }
 
     companion object {
