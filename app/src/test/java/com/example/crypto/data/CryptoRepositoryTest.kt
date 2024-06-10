@@ -1,11 +1,10 @@
 package com.example.crypto.data
 
 import com.example.crypto.FakeData
-import com.example.crypto.data.remote.CryptoApi
+import com.example.crypto.data.source.network.CryptoApi
 import com.example.crypto.utils.Result
 import com.example.crypto.utils.UNABLE_TO_CONNECT_TO_INTERNET
 import com.google.common.truth.Truth.assertThat
-import com.google.gson.JsonSyntaxException
 import kotlinx.coroutines.test.runTest
 import okhttp3.MediaType
 import okhttp3.ResponseBody

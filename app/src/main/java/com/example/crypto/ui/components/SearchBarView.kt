@@ -23,6 +23,7 @@ class SearchBarView @JvmOverloads constructor(
     private var afterTextChangedListener: ((input: String) -> Unit)? = null
     private var delayMillis: Long = 400
     private val debounceHandler: Handler = Handler(Looper.getMainLooper())
+    private var debounceWorker: DebounceRunnable = DebounceRunnable("", null)
 
     init {
         setupView()
@@ -57,9 +58,9 @@ class SearchBarView @JvmOverloads constructor(
 
     private fun setupSearchTextChangeListener() {
         binding.etSearch.doAfterTextChanged { text ->
-            debounceHandler.postDelayed({
-                afterTextChangedListener?.invoke(text.toString().trim())
-            }, delayMillis)
+            debounceHandler.removeCallbacks(debounceWorker)
+            debounceWorker = DebounceRunnable(text.toString(), afterTextChangedListener)
+            debounceHandler.postDelayed(debounceWorker, delayMillis)
         }
     }
 

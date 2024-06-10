@@ -13,6 +13,8 @@ import com.example.crypto.data.model.FilterTypes
 import com.example.crypto.utils.Result
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -23,8 +25,8 @@ class CryptoViewModel(private val repository: CryptoRepository) : ViewModel() {
             field = if (originalCoinList == null) true else value
         }
 
-    private val _viewState = MutableLiveData<CryptoViewState>()
-    val viewState: LiveData<CryptoViewState> = _viewState
+    private val _viewState = MutableStateFlow<CryptoViewState>(CryptoViewState.Loading)
+    val viewState: StateFlow<CryptoViewState> = _viewState
 
     private val _isLoading = MutableLiveData<Boolean>()
     val isLoading: LiveData<Boolean> = _isLoading
@@ -34,13 +36,16 @@ class CryptoViewModel(private val repository: CryptoRepository) : ViewModel() {
     private var updatedFilters: MutableList<Filter> =
         FilterTypes.entries.map { Filter(it.filterName, false, it.filterId) }.toMutableList()
 
-    fun fetchCryptoCoins() {
+
+    fun fetchCoins(force: Boolean = false) {
         viewModelScope.launch {
-            fetch {
-                when (val res = repository.fetchCryptoCoins()) {
+            _viewState.value = CryptoViewState.Loading
+            repository.fetchCoins().collect { res ->
+                when (res) {
                     is Result.Success -> {
                         originalCoinList = res.data
-                        _viewState.value = CryptoViewState.CryptoData(res.data)
+                        _viewState.value =
+                            CryptoViewState.CryptoData(res.data, res is Result.Success.Cache)
                     }
 
                     is Result.SuccessWithNoResult -> {
@@ -63,17 +68,17 @@ class CryptoViewModel(private val repository: CryptoRepository) : ViewModel() {
                 return@launch
             }
 
-            fetch {
-                if (selectedFilters == null) {
-                    _viewState.value = if (searchText.isEmpty()) {
-                        CryptoViewState.CryptoData(coinList)
-                    } else {
-                        CryptoViewState.CryptoData(findCoins(coinList, searchText))
-                    }
+            _viewState.value = CryptoViewState.Loading
+            if (selectedFilters == null) {
+                _viewState.value = if (searchText.isEmpty()) {
+                    CryptoViewState.CryptoData(coinList)
                 } else {
-                    updateLocalFilters(selectedFilters)
-                    _viewState.value = CryptoViewState.CryptoData(findCoinsWithFilters(coinList, searchText))
+                    CryptoViewState.CryptoData(findCoins(coinList, searchText))
                 }
+            } else {
+                updateLocalFilters(selectedFilters)
+                _viewState.value =
+                    CryptoViewState.CryptoData(findCoinsWithFilters(coinList, searchText))
             }
         }
     }
@@ -136,13 +141,12 @@ class CryptoViewModel(private val repository: CryptoRepository) : ViewModel() {
     fun performSearch(inputStr: String) {
         searchJob?.cancel()
         searchJob = viewModelScope.launch {
-            fetch {
-                val coinList = originalCoinList
-                _viewState.value = if (coinList.isNullOrEmpty()) {
-                    CryptoViewState.Error("No Coins found!")
-                } else {
-                    CryptoViewState.CryptoData(findCoinsWithFilters(coinList, inputStr))
-                }
+            _viewState.value = CryptoViewState.Loading
+            val coinList = originalCoinList
+            _viewState.value = if (coinList.isNullOrEmpty()) {
+                CryptoViewState.Error("No Coins found!")
+            } else {
+                CryptoViewState.CryptoData(findCoinsWithFilters(coinList, inputStr))
             }
         }
     }
@@ -162,11 +166,5 @@ class CryptoViewModel(private val repository: CryptoRepository) : ViewModel() {
                 ) == true)
             }
         }
-
-    private inline fun fetch(block: () -> Unit) {
-        _isLoading.value = true
-        block()
-        _isLoading.value = false
-    }
 
 }

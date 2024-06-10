@@ -2,7 +2,7 @@ plugins {
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.jetbrainsKotlinAndroid)
     alias(libs.plugins.kotlinKapt)
-    id("kotlin-parcelize")
+    alias(libs.plugins.kotlinParcelize)
 }
 
 android {
@@ -42,6 +42,7 @@ android {
 
 dependencies {
 
+    implementation(project(":analytics"))
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
@@ -56,6 +57,7 @@ dependencies {
 
     implementation(libs.lifecycle.viewmodel.ktx)
     implementation(libs.lifecycle.livedata.ktx)
+    implementation(libs.lifecycle.runtime.ktx)
 
     implementation(libs.retrofit)
     implementation(libs.retrofit.gson.convertor)

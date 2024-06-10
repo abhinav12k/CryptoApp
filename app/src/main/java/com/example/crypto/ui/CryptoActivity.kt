@@ -7,13 +7,16 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.flowWithLifecycle
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.crypto.CryptoApp
-import com.example.crypto.data.CryptoRepository
-import com.example.crypto.data.remote.CryptoApi
 import com.example.crypto.databinding.ActivityCryptoBinding
 import com.example.crypto.utils.MarginItemDecoration
 import com.example.crypto.utils.getViewModel
+import com.example.crypto.utils.trackEvent
+import kotlinx.coroutines.launch
 
 class CryptoActivity : AppCompatActivity() {
 
@@ -28,6 +31,8 @@ class CryptoActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        trackEvent("CryptoActivity_opened", mapOf("init_successful" to "true"))
+        trackEvent("test1") // blacklisted event won't be tracked
         binding = ActivityCryptoBinding.inflate(LayoutInflater.from(this))
         enableEdgeToEdge()
         setContentView(binding.root)
@@ -40,7 +45,7 @@ class CryptoActivity : AppCompatActivity() {
         setupSearchBar()
         setupRecyclerView()
         setupLiveDataObservers()
-        if (viewModel.refetchCoinsList) viewModel.fetchCryptoCoins()
+        if (viewModel.refetchCoinsList) viewModel.fetchCoins()
         binding.flFilter.setOnClickListener { launchFilterBottomsheet() }
     }
 
@@ -74,12 +79,10 @@ class CryptoActivity : AppCompatActivity() {
     }
 
     private fun setupLiveDataObservers() {
-        viewModel.viewState.observe(this) {
-            handleViewState(it)
-        }
-
-        viewModel.isLoading.observe(this) { isLoading ->
-            binding.progressBar.isVisible = isLoading
+        lifecycleScope.launch {
+            viewModel.viewState.flowWithLifecycle(lifecycle, Lifecycle.State.STARTED).collect {
+                handleViewState(it)
+            }
         }
     }
 
@@ -87,6 +90,7 @@ class CryptoActivity : AppCompatActivity() {
     private fun handleViewState(viewState: CryptoViewState) {
         when (viewState) {
             is CryptoViewState.CryptoData -> {
+                binding.progressBar.isVisible = false
                 binding.errorLayout.isVisible = false
                 binding.rvCoins.isVisible = true
 
@@ -95,16 +99,19 @@ class CryptoActivity : AppCompatActivity() {
             }
 
             is CryptoViewState.Error -> {
+                binding.progressBar.isVisible = false
                 binding.errorLayout.isVisible = true
                 binding.rvCoins.isVisible = false
 
                 binding.errorText.text = viewState.message
                 binding.errorBtn.isVisible = viewState.retryAllowed
                 binding.errorBtn.setOnClickListener {
-                    viewModel.fetchCryptoCoins()
+                    viewModel.fetchCoins()
                     binding.errorLayout.isVisible = false
                 }
             }
+
+            is CryptoViewState.Loading -> binding.progressBar.isVisible = true
         }
     }
 

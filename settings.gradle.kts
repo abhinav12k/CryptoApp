@@ -21,4 +21,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "Crypto"
 include(":app")
- 
+include(":analytics")

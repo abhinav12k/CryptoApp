@@ -1,41 +1,54 @@
 package com.example.crypto.data
 
-import com.example.crypto.data.remote.CryptoApi
+import com.example.crypto.data.source.local.CoinsLocalDataSource
+import com.example.crypto.data.source.network.CoinsNetworkSource
 import com.example.crypto.utils.ErrorBody
 import com.example.crypto.utils.GsonHelper.parseToClass
 import com.example.crypto.utils.Result
 import com.example.crypto.utils.UNABLE_TO_CONNECT_TO_INTERNET
 import com.google.gson.JsonSyntaxException
-import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.flow.flow
 import retrofit2.Response
 import java.io.IOException
 
 class CryptoRepository(
-    private val cryptoApi: CryptoApi,
-    private val dispatcher: CoroutineDispatcher = Dispatchers.IO
+    private val coinsNetworkSource: CoinsNetworkSource,
+    private val coinsLocalDataSource: CoinsLocalDataSource
 ) {
 
-    suspend fun fetchCryptoCoins() = withContext(dispatcher) {
-        try {
-            val res = cryptoApi.getCoinData()
-            if (res.isSuccessful) {
-                val body = res.body()
-                if (body != null) {
-                    Result.Success(body)
-                } else {
-                    Result.SuccessWithNoResult
-                }
-            } else {
-                Result.Failure(prepareErrorBody(res))
-            }
-        } catch (ioException: IOException) {
-            Result.Failure(ErrorBody(UNABLE_TO_CONNECT_TO_INTERNET))
-        } catch (jsonSyntaxException: JsonSyntaxException) {
-            Result.Failure(ErrorBody("Error while parsing json"))
+    fun fetchCoins() = flow {
+        var isCacheHit = false
+        val coins = coinsLocalDataSource.getCoinsFromDb().map { it.toCoin() }
+        if (coins.isNotEmpty()) {
+            isCacheHit = true
+            emit(Result.Success.Cache(coins))
+        }
+
+        when (val networkResult = fetchCryptoCoins()) {
+            is Result.Success -> emit(networkResult)
+            else -> if (!isCacheHit) emit(networkResult)
         }
     }
+
+    private suspend fun fetchCryptoCoins() = try {
+        val res = coinsNetworkSource.getLatestCoins()
+        if (res.isSuccessful) {
+            val body = res.body()
+            if (body != null) {
+                coinsLocalDataSource.clearOldCoinsAndSaveNewToDb(body.toCoinsEntity())
+                Result.Success.Network(body.toCoinsViewState())
+            } else {
+                Result.SuccessWithNoResult
+            }
+        } else {
+            Result.Failure(prepareErrorBody(res))
+        }
+    } catch (ioException: IOException) {
+        Result.Failure(ErrorBody(UNABLE_TO_CONNECT_TO_INTERNET))
+    } catch (jsonSyntaxException: JsonSyntaxException) {
+        Result.Failure(ErrorBody("Error while parsing json"))
+    }
+
 
     private fun <T> prepareErrorBody(response: Response<T>): ErrorBody {
         val httpCode = response.code()
