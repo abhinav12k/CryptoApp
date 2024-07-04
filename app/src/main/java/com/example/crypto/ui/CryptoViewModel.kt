@@ -11,14 +11,17 @@ import com.example.crypto.data.model.Coin.Companion.TOKEN_TYPE
 import com.example.crypto.data.model.Filter
 import com.example.crypto.data.model.FilterTypes
 import com.example.crypto.utils.Result
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import javax.inject.Inject
 
-class CryptoViewModel(private val repository: CryptoRepository) : ViewModel() {
+@HiltViewModel
+class CryptoViewModel @Inject constructor(private val repository: CryptoRepository) : ViewModel() {
 
     var refetchCoinsList: Boolean = true
         set(value) {

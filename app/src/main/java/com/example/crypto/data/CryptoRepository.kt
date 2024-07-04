@@ -10,8 +10,9 @@ import com.google.gson.JsonSyntaxException
 import kotlinx.coroutines.flow.flow
 import retrofit2.Response
 import java.io.IOException
+import javax.inject.Inject
 
-class CryptoRepository(
+class CryptoRepository @Inject constructor(
     private val coinsNetworkSource: CoinsNetworkSource,
     private val coinsLocalDataSource: CoinsLocalDataSource
 ) {

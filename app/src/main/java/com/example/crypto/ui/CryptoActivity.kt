@@ -3,6 +3,7 @@ package com.example.crypto.ui
 import android.os.Bundle
 import android.view.LayoutInflater
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
@@ -16,16 +17,15 @@ import com.example.crypto.databinding.ActivityCryptoBinding
 import com.example.crypto.utils.MarginItemDecoration
 import com.example.crypto.utils.getViewModel
 import com.example.crypto.utils.trackEvent
+import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
+@AndroidEntryPoint
 class CryptoActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityCryptoBinding
-    private val viewModel: CryptoViewModel by lazy {
-        getViewModel {
-            CryptoViewModel((application as CryptoApp).repository)
-        }
-    }
+    private val viewModel: CryptoViewModel by viewModels()
 
     private val adapter by lazy { CoinsAdapter() }
 

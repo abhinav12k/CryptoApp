@@ -2,8 +2,11 @@ package com.example.crypto.data.source.local
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import javax.inject.Inject
+import javax.inject.Singleton
 
-class CoinsLocalDataSource(private val coinsDao: CoinsDao) {
+@Singleton
+class CoinsLocalDataSource @Inject constructor(private val coinsDao: CoinsDao) {
 
     suspend fun getCoinsFromDb(): List<CoinEntity> = withContext(Dispatchers.IO) {
         coinsDao.getAllCoins()
